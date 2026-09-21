@@ -116,7 +116,12 @@ class SongOrganizer:
         elif self.create_script == True:
             pass # TODO
 
-# TODO: readme and the other stuff
+# TODO:
+#   - readme and the other stuff
+#   - a way to handle album folders which have "CD1" and "CD2" inside
+#   - a "daemon" mode to automatically sort from soulseek finished downloads directory and into
+#     the right artist folders, + automatically create artist folders
+#   - a way to detect possibly fucked up metadata (probably a stretch?)
             
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("song_organizer")
