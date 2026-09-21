@@ -19,7 +19,7 @@ class SongOrganizer:
     #   country = artist country
     #   genres = genres (object), TODO
 
-    def __init__(self, directory: str = "./", fmt: str = "[{year}] {{{catno}}} {name}", verbose: int = 0):
+    def __init__(self, directory: str = "./", fmt: str = "[{year}] {{{catno}}} {name}", verbose: bool = False):
         # set user token env var to use discogs functionality
         self.d = discogs_client.Client('song_organizer/0.1', user_token=os.getenv("DISCOGS_API_KEY"))
         self.verbose = verbose
@@ -40,7 +40,7 @@ class SongOrganizer:
                         self.albums.update({os.getcwd(): tags.album})
                         break
                     except Exception as e:
-                        if self.verbose > 2:
+                        if self.verbose == True:
                             print(f"exception: {e}, continuing")
             os.chdir("../") # back
 
@@ -52,7 +52,8 @@ class SongOrganizer:
             try:
                 results = self.d.search(album, type='release')
             except Exception as e:
-                print(f"{e}: failed to fetch album {album} on discogs")
+                if self.verbose == True:
+                    print(f"{e}: failed to fetch album {album} on discogs")
 
             name = album
             try:
@@ -67,6 +68,12 @@ class SongOrganizer:
 
             # source for fstring eval - https://stackoverflow.com/a/53671539
             self.albums.update({old_path: os.path.join(os.getcwd(), eval(f'f"""{self.fmt}"""'))})
+
+    # shows diff
+    # asks to [(a)pply]/(k)eep old/(e)dit
+    # does operation
+    def rename_album(self):
+        
 
 # TODO:
 #   - cli
