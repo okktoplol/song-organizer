@@ -7,10 +7,12 @@
 import discogs_client # https://www.discogs.com/ api client
 from tinytag import TinyTag # for checking music files tags
 import os
+import argparse
 
 class SongOrganizer:
-    # directory: artist directory with albums
-    # fmt: format for final directory name, parsed as fstring (must escape '{}' with {{}}), fields:
+    # directory: artist directory with albums, positional argument 1 or set with --directory
+    # fmt: format for final directory name, parsed as fstring (must escape '{}' with {{}}),
+    # set with --format, fields:
     #   name = album name
     #   catno = catalogue number (or none)
     #   label = label name (first in object)
@@ -18,18 +20,23 @@ class SongOrganizer:
     #   artist = album artist (first in object)
     #   country = artist country
     #   genres = genres (object), TODO
-
-    def __init__(self, directory: str = "./", fmt: str = "[{year}] {{{catno}}} {name}", verbose: bool = False):
+    # verbose: generic --verbose option for showing all non fatal exceptions and such
+    # create_script: creates a shell script with batch rename operation instead of interactive shell,
+    # so the user can revise before applying more easily, TODO
+    def __init__(self, directory, fmt: str = "[{year}] {{{catno}}} {name}", verbose: bool = False, create_script: bool = False):
         # set user token env var to use discogs functionality
         self.d = discogs_client.Client('song_organizer/0.1', user_token=os.getenv("DISCOGS_API_KEY"))
-        self.verbose = verbose
+        self.create_script = create_script
         self.albums = {}
         self.fmt = fmt
+        self.verbose = verbose
         os.chdir(directory)
 
     # goes into directory, finds audio file, gets album metadata and puts into self.albums
     # format: {"/path/to/old_album_directory_name": "album name"}
     def descend_into_dir(self):
+        if self.verbose == True:
+            print(":: getting directories names")
         for dirs in os.listdir("./"):
             os.chdir(dirs) # descend
             for file in os.listdir("./"):
@@ -47,10 +54,21 @@ class SongOrganizer:
     # gets information about every album in self.albums
     # changes self.albums to have the old album path (to-be-renamed) and new album path
     # {"/path/to/old_album_directory_name": "/path/to/new_formatted_album_directory_name"}
+    #
+    # TODO: it turns out sometimes two albums have the same name, also we're making many requests to discogs and thats LAME
+    # so i think instead of searching for each album, it should search for the artist, iterate over the albums, figure out the right ones and go based on that
+    # it both reduces the number of wrong matches and the number of api calls u need to do
     def create_names(self):
+        iteration = 0
+        albums_len = len(self.albums)
+        print(":: fetching discogs for information and creating album names (if it looks stuck ur probably being rate limited, just wait)")
         for (old_path, album) in self.albums.items():
+            iteration += 1
             try:
                 results = self.d.search(album, type='release')
+                # program feels sluggish if not u dont constantly tell the user its doing something
+                # thats why this is not behind --verbose
+                print(f"{iteration}/{albums_len}")
             except Exception as e:
                 if self.verbose == True:
                     print(f"{e}: failed to fetch album {album} on discogs")
@@ -60,31 +78,57 @@ class SongOrganizer:
                 catno = results[0].labels[0].data['catno']
             except:
                 catno = "none"
-            label = results[0].labels[0].data['name']
-            year = results[0].year
-            artist = results[0].artists[0]
-            country = results[0].country
-            genres = results[0].genres
+            
+            # probably all of these need to be in try except block but im not using it so i just commented the ones im not using out
+            # TODO: fix
+            
+            # label = results[0].labels[0].data['name']
+            try:
+                year = results[0].year
+            except:
+                year = "idk"
+            # artist = results[0].artists
+            # country = results[0].country
+            # genres = results[0].genres
 
             # source for fstring eval - https://stackoverflow.com/a/53671539
             self.albums.update({old_path: os.path.join(os.getcwd(), eval(f'f"""{self.fmt}"""'))})
 
     # shows diff
-    # asks to [(a)pply]/(k)eep old/(e)dit
+    # asks to [Y/n]
     # does operation
+    # OR
+    # create bash script
     def rename_album(self):
-        
+        if self.create_script == False:
+            for (old_path, new_path) in self.albums.items():
+                while True:
+                    prompt = input(f":: rename {os.path.basename(old_path)} to {os.path.basename(new_path)}? [Y/n] ").lower()
 
-# TODO:
-#   - cli
-#   - thingy that will rename the albums
-#   - readme and the other stuff
+                    if prompt == "yes" or prompt == "y" or prompt == "":
+                        os.rename(old_path, new_path) # if this fails open an issue, doesnt recover
+                        break
+                    elif prompt == "no" or prompt == "n":
+                        print("skipping")
+                        break
+                    else:
+                        print("invalid option, try again")
+        elif self.create_script == True:
+            pass # TODO
+
+# TODO: readme and the other stuff
             
 if __name__ == "__main__":
-    s = SongOrganizer("/home/lia/media/music/Unlucky Morpheus")
+    parser = argparse.ArgumentParser("song_organizer")
+    parser.add_argument("directory", help="Directory containing the albums which should be renamed", type=str)
+    parser.add_argument("-f", "--format", default="[{year}] {{{catno}}} {name}", help="Album format when renamed, python fstring, see documentation for options", type=str) # TODO: add options in documentation
+    parser.add_argument("--verbose", default=False, help="Shows errors that were handled and other misc stuff", type=bool)
+    parser.add_argument("--create-script", default=False, help="Instead of an interactive command line app, simply creates a shell script you can run to apply renaming changes", type=bool)
+
+    args = parser.parse_args()
+    
+    s = SongOrganizer(args.directory, args.format, args.verbose, args.create_script)
 
     s.descend_into_dir()
-
     s.create_names()
-
-    print(s.albums)
+    s.rename_album()
