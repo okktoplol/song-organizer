@@ -3,7 +3,7 @@ a simple python script for organizing albums and formatting album names using bo
 
 ## usage
 - run ```python3 song_organizer.py path-to-directory```
-- use the option ```--output-script``` if you'd like a bash script with the changes to be outputted to stdout instead of being prompted to apply them in a cli, ```python3 song-organizer.py path-to-directory --output-script > script.sh``` creates a file called script.sh with the alteration then you can revise, ```chmod +x``` it and run it to apply the changes
+- use the option ```--output-script``` if you'd like a bash script with the changes to be outputted to stdout instead of being prompted to apply them in a cli, ```python3 song-organizer.py path-to-directory --output-script > script.sh``` creates a file called ```script.sh``` with the alteration then you can revise, ```chmod +x``` it and run it to apply the changes
 - use to option ```-f``` and specify a format (following python f-strings) to use when renaming
 ##### format options
 - {name}: album name
