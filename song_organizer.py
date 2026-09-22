@@ -81,19 +81,16 @@ class SongOrganizer:
             try:
                 catno = results[0].labels[0].data['catno']
             except:
-                catno = "none"
-            
-            # probably all of these need to be in try except block but im not using it so i just commented the ones im not using out
-            # TODO: fix
-            
-            # label = results[0].labels[0].data['name']
+                catno = "none" 
             try:
                 year = results[0].year
             except:
-                year = "idk"
-            # artist = results[0].artists
-            # country = results[0].country
-            # genres = results[0].genres
+                year = "unkn" # "unknown"? it looks better than idk
+            artist = self.album_artist
+            try:
+                country = results[0].country
+            except:
+                country = "somewhere"
 
             # source for fstring eval - https://stackoverflow.com/a/53671539
             self.albums.update({old_path: os.path.join(os.getcwd(), eval(f'f"""{self.fmt}"""'))})
