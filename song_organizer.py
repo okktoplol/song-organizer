@@ -30,10 +30,12 @@ class SongOrganizer:
         self.albums = {}
         self.fmt = fmt
         self.verbose = verbose
+        self.album_artist = []
         os.chdir(directory)
 
     # goes into directory, finds audio file, gets album metadata and puts into self.albums
-    # format: {"/path/to/old_album_directory_name": "album name"}
+    # also gets artist name while at it and puts into self.album_artist
+    # format: {"/path/to/old_album_directory_name": ["album name"]}
     def descend_into_dir(self):
         if self.verbose == True:
             print(":: getting directories names")
@@ -45,27 +47,26 @@ class SongOrganizer:
                     try:
                         tags = TinyTag.get(full_file)
                         self.albums.update({os.getcwd(): tags.album})
+                        self.album_artist.append(tags.artist)
                         break
                     except Exception as e:
                         if self.verbose == True:
                             print(f"exception: {e}, continuing")
             os.chdir("../") # back
-
+            
     # gets information about every album in self.albums
     # changes self.albums to have the old album path (to-be-renamed) and new album path
     # {"/path/to/old_album_directory_name": "/path/to/new_formatted_album_directory_name"}
-    #
-    # TODO: it turns out sometimes two albums have the same name, also we're making many requests to discogs and thats LAME
-    # so i think instead of searching for each album, it should search for the artist, iterate over the albums, figure out the right ones and go based on that
-    # it both reduces the number of wrong matches and the number of api calls u need to do
     def create_names(self):
         iteration = 0
         albums_len = len(self.albums)
+        artist = max(set(self.album_artist), key=self.album_artist.count)
         print(":: fetching discogs for information and creating album names (if it looks stuck ur probably being rate limited, just wait)")
         for (old_path, album) in self.albums.items():
             iteration += 1
             try:
-                results = self.d.search(album, type='release')
+                # adding the artist to the search query improves accuracy a lot
+                results = self.d.search(album, artist=artist, type='release')
                 # program feels sluggish if not u dont constantly tell the user its doing something
                 # thats why this is not behind --verbose
                 print(f"{iteration}/{albums_len}")
@@ -123,7 +124,7 @@ class SongOrganizer:
 #     the right artist folders, + automatically create artist folders
 #   - a way to detect possibly fucked up metadata (probably a stretch?)
             
-if __name__ == "__main__":
+if __name__ == "__main__":  
     parser = argparse.ArgumentParser("song_organizer")
     parser.add_argument("directory", help="Directory containing the albums which should be renamed", type=str)
     parser.add_argument("-f", "--format", default="[{year}] {{{catno}}} {name}", help="Album format when renamed, python fstring, see documentation for options", type=str) # TODO: add options in documentation
