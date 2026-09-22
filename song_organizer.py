@@ -31,6 +31,7 @@ class SongOrganizer:
         self.fmt = fmt
         self.verbose = verbose
         self.album_artist = []
+        self.initial_dir = directory
         os.chdir(directory)
 
     # goes into directory, finds audio file, gets album metadata and puts into self.albums
@@ -61,7 +62,8 @@ class SongOrganizer:
         iteration = 0
         albums_len = len(self.albums)
         artist = max(set(self.album_artist), key=self.album_artist.count)
-        print(":: fetching discogs for information and creating album names (if it looks stuck ur probably being rate limited, just wait)")
+        if self.create_script != True:
+            print(":: fetching discogs for information and creating album names (if it looks stuck ur probably being rate limited, just wait)")
         for (old_path, album) in self.albums.items():
             iteration += 1
             try:
@@ -69,7 +71,9 @@ class SongOrganizer:
                 results = self.d.search(album, artist=artist, type='release')
                 # program feels sluggish if not u dont constantly tell the user its doing something
                 # thats why this is not behind --verbose
-                print(f"{iteration}/{albums_len}")
+                # but it cant get on the script if that option is enabled
+                if self.create_script != True:
+                    print(f"{iteration}/{albums_len}")
             except Exception as e:
                 if self.verbose == True:
                     print(f"{e}: failed to fetch album {album} on discogs")
@@ -107,7 +111,10 @@ class SongOrganizer:
                     prompt = input(f":: rename {os.path.basename(old_path)} to {os.path.basename(new_path)}? [Y/n] ").lower()
 
                     if prompt == "yes" or prompt == "y" or prompt == "":
-                        os.replace(old_path, new_path) # if this fails open an issue, doesnt recover
+                        try:
+                            os.replace(old_path, new_path) # if this fails open an issue, directory will just be skipped
+                        except Exception as e:
+                            print(f"{e}: couldnt rename the directory, open an issue, skipping")
                         break
                     elif prompt == "no" or prompt == "n":
                         print("skipping")
@@ -115,25 +122,26 @@ class SongOrganizer:
                     else:
                         print("invalid option, try again")
         elif self.create_script == True:
-            pass # TODO
+            print("#!/usr/bin/env bash\n")
+            for (old_path, new_path) in self.albums.items():
+                print(f'mv "{old_path}" "{new_path}"')
+            print('\necho "done"')
 
 # TODO:
-#   - readme and the other stuff
 #   - a way to handle album folders which have "CD1" and "CD2" inside
 #   - a "daemon" mode to automatically sort from soulseek finished downloads directory and into
 #     the right artist folders, + automatically create artist folders
-#   - a way to detect possibly fucked up metadata (probably a stretch?)
             
 if __name__ == "__main__":  
     parser = argparse.ArgumentParser("song_organizer")
     parser.add_argument("directory", help="Directory containing the albums which should be renamed", type=str)
     parser.add_argument("-f", "--format", default="[{year}] {{{catno}}} {name}", help="Album format when renamed, python fstring, see documentation for options", type=str) # TODO: add options in documentation
-    parser.add_argument("--verbose", default=False, help="Shows errors that were handled and other misc stuff", type=bool)
-    parser.add_argument("--create-script", default=False, help="Instead of an interactive command line app, simply creates a shell script you can run to apply renaming changes", type=bool)
+    parser.add_argument("--verbose", action='store_true', default=False, help="Shows errors that were handled and other misc stuff")
+    parser.add_argument("--output-script", action='store_true', default=False, help="Instead of an interactive command line app, simply outputs a shell script you can pipe to a file and run to apply renaming changes")
 
     args = parser.parse_args()
     
-    s = SongOrganizer(args.directory, args.format, args.verbose, args.create_script)
+    s = SongOrganizer(args.directory, args.format, args.verbose, args.output_script)
 
     s.descend_into_dir()
     s.create_names()
