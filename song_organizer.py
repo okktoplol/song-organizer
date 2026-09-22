@@ -31,7 +31,6 @@ class SongOrganizer:
         self.fmt = fmt
         self.verbose = verbose
         self.album_artist = []
-        self.initial_dir = directory
         os.chdir(directory)
 
     # goes into directory, finds audio file, gets album metadata and puts into self.albums
