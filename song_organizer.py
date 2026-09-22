@@ -107,7 +107,7 @@ class SongOrganizer:
                     prompt = input(f":: rename {os.path.basename(old_path)} to {os.path.basename(new_path)}? [Y/n] ").lower()
 
                     if prompt == "yes" or prompt == "y" or prompt == "":
-                        os.rename(old_path, new_path) # if this fails open an issue, doesnt recover
+                        os.replace(old_path, new_path) # if this fails open an issue, doesnt recover
                         break
                     elif prompt == "no" or prompt == "n":
                         print("skipping")
