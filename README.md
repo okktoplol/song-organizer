@@ -22,7 +22,5 @@ a simple python script for organizing albums and formatting album names using bo
 ## roadmap
 - [x] basic functionality
 - [x] functionality for creating a shell script to rename instead of using built in python functions
-- [ ] way to handle folders with "CD1" and "CD2" subfolders
 - [ ] daemon mode to watch folder and automatically sort stuff that goes inside it
-- [ ] small mode to rename song names based on metadata alone
 - [ ] extended documentation
